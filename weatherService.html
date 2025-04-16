@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather API Bridge</title>
     <script>
-        // Allow cross-origin requests
         document.addEventListener('DOMContentLoaded', function() {
-            // Get city from URL parameter (e.g., ?city=London)
             const urlParams = new URLSearchParams(window.location.search);
             const city = urlParams.get('city') || 'Hanoi';
             const weatherDiv = document.getElementById('weather-data');
-            
-            // Fetch weather from API
+
             fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=663330f095704cee5484c082019c1202`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    // Format data as a simple JSON object
                     const weatherData = {
                         city: data.name,
                         temperature: Math.round(data.main.temp),
@@ -24,15 +25,17 @@
                         icon: data.weather[0].icon,
                         timestamp: new Date().toISOString()
                     };
-                    
-                    // Display on page and expose as JSON
-                    weatherDiv.textContent = JSON.stringify(weatherData);
-                    
-                    // Make available to parent frame if embedded
-                    window.parent.postMessage(weatherData, '*');
+
+                    const iconUrl = `https://openweathermap.org/img/wn/${weatherData.icon}@2x.png`;
+                    weatherDiv.innerHTML = `
+                        <p>${weatherData.city}: ${weatherData.temperature}°C, ${weatherData.condition}</p>
+                        <img src="${iconUrl}" alt="${weatherData.condition}" />
+                    `;
+
+                    window.parent.postMessage(weatherData, 'https://your-allowed-origin.com');
                 })
                 .catch(error => {
-                    weatherDiv.textContent = JSON.stringify({error: 'Weather data unavailable'});
+                    weatherDiv.textContent = 'Unable to fetch weather data. Please try again.';
                 });
         });
     </script>
